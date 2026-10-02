@@ -3250,27 +3250,37 @@ async function drawYDescargarCotizacionPDF(reg){
   // Cajas CLIENTE / ENTREGA
   const boxGap = 6;
   const boxWide = (contentW - boxGap) / 2;
-  const infoBoxH = 32;
+  const boxPad = 5, lineH = 4.2, nameLineH = 5;
+  const textW = boxWide - boxPad*2;
+  // Preparar l\u00edneas ajustadas al ancho de cada caja
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  const nameLines = doc.splitTextToSize(cliente.empresa || '', textW);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  const wrap = arr => arr.filter(Boolean).reduce((acc, t) => acc.concat(doc.splitTextToSize(t, textW)), []);
+  const clienteLines = wrap([
+    cliente.contactoNombre ? 'Atenci\u00f3n a: ' + cliente.contactoNombre : '',
+    cliente.contactoNumero ? 'Contacto: ' + cliente.contactoNumero : '',
+    cliente.correo ? 'Correo: ' + cliente.correo : ''
+  ]);
+  const entregaLines = wrap([
+    cliente.ubicacion ? 'Lugar de entrega: ' + cliente.ubicacion : '',
+    'Tiempo de entrega: Definir con cliente'
+  ]);
+  const maxBody = Math.max(clienteLines.length, entregaLines.length);
+  const infoBoxH = Math.max(32, 14 + (nameLines.length - 1) * nameLineH + 6 + (maxBody - 1) * lineH + 6);
   [
-    { title: 'CLIENTE', x: margin },
-    { title: 'ENTREGA', x: margin + boxWide + boxGap }
+    { title: 'CLIENTE', x: margin, lines: clienteLines },
+    { title: 'ENTREGA', x: margin + boxWide + boxGap, lines: entregaLines }
   ].forEach(b => {
     doc.setFillColor(...colCream);
     doc.roundedRect(b.x, y, boxWide, infoBoxH, 1.5, 1.5, 'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...colWood);
-    doc.text(b.title, b.x+5, y+7);
+    doc.text(b.title, b.x+boxPad, y+7);
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...colBrown);
-    doc.text(cliente.empresa || '', b.x+5, y+14);
+    doc.text(nameLines, b.x+boxPad, y+14, { lineHeightFactor: nameLineH / (12 * 0.3528) });
     doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...colGray);
-    let ly = y+20;
-    if(b.title === 'CLIENTE'){
-      if(cliente.contactoNombre){ doc.text('Atenci\u00f3n a: ' + cliente.contactoNombre, b.x+5, ly); ly += 4.5; }
-      if(cliente.contactoNumero){ doc.text('Contacto: ' + cliente.contactoNumero, b.x+5, ly); ly += 4.5; }
-      if(cliente.correo){ doc.text('Correo: ' + cliente.correo, b.x+5, ly); }
-    } else {
-      if(cliente.ubicacion){ doc.text('Lugar de entrega: ' + cliente.ubicacion, b.x+5, ly); ly += 4.5; }
-      doc.text('Tiempo de entrega: Definir con cliente', b.x+5, ly);
-    }
+    let ly = y + 14 + (nameLines.length - 1) * nameLineH + 6;
+    b.lines.forEach(l => { doc.text(l, b.x+boxPad, ly); ly += lineH; });
   });
   y += infoBoxH + 12;
 
