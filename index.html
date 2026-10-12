@@ -1470,6 +1470,52 @@
     </table>
     </div>
 
+    <div id="acusePanel" style="display:none;">
+      <div class="section-title" style="margin-top:22px;">Acuse de entrega</div>
+      <div class="tag-form" style="border-style:solid;">
+        <div id="acuseVentaInfo" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin-bottom:12px;"></div>
+
+        <div class="settings-bar" style="margin-bottom:12px;">
+          <div class="field"><label for="acuFolio">Folio de entrega</label><input type="text" id="acuFolio"></div>
+          <div class="field"><label for="acuFecha">Fecha de entrega</label><input type="date" id="acuFecha"></div>
+          <div class="field"><label for="acuHora">Hora (vacío = a mano)</label><input type="time" id="acuHora"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">Datos del cliente</div>
+        <div class="settings-bar" style="margin-bottom:12px;">
+          <div class="field wide" style="min-width:240px;"><label for="acuCliNombre">Nombre / razón social</label><input type="text" id="acuCliNombre"></div>
+          <div class="field"><label for="acuCliContacto">Contacto</label><input type="text" id="acuCliContacto"></div>
+          <div class="field"><label for="acuCliTelefono">Teléfono</label><input type="text" id="acuCliTelefono"></div>
+          <div class="field wide" style="min-width:300px;"><label for="acuCliDomicilio">Domicilio</label><input type="text" id="acuCliDomicilio"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">Datos de la entrega</div>
+        <div class="settings-bar" style="margin-bottom:12px;">
+          <div class="field wide" style="min-width:300px;"><label for="acuLugar">Lugar de entrega</label><input type="text" id="acuLugar"></div>
+          <div class="field"><label for="acuChofer">Chofer (vacío = a mano)</label><input type="text" id="acuChofer"></div>
+          <div class="field"><label for="acuUnidad">Unidad / placas (vacío = a mano)</label><input type="text" id="acuUnidad"></div>
+          <div class="field"><label for="acuCertificado">Certificado TT</label><input type="text" id="acuCertificado" placeholder="Ej. HT-0001-2026"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:4px;">Mercancía entregada</div>
+        <div class="settings-bar" style="margin-bottom:12px;">
+          <div class="field"><label for="acuCantidad">Cantidad</label><input type="number" id="acuCantidad" min="1" step="1"></div>
+          <div class="field wide" style="min-width:300px;"><label for="acuConcepto">Concepto</label><input type="text" id="acuConcepto"></div>
+          <div class="field"><label for="acuDimensiones">Dimensiones</label><input type="text" id="acuDimensiones" placeholder="Ej. 40 In x 48 In"></div>
+        </div>
+        <div class="field wide" style="margin-bottom:12px;">
+          <label for="acuObservaciones">Observaciones (opcional; si se deja vacío, queda el recuadro para escribir a mano)</label>
+          <input type="text" id="acuObservaciones">
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="generarAcuseEntregaPDF()">📄 Descargar acuse de entrega (PDF)</button>
+          <button class="btn btn-ghost" onclick="cerrarAcuse()">Cerrar</button>
+        </div>
+        <div id="acuseMsg" style="font-family:var(--mono); font-size:12px; color:var(--orange); margin-top:10px;"></div>
+      </div>
+    </div>
+
     <div class="section-title">Ventas totales por mes</div>
     <div class="table-scroll">
     <table class="cutlist">
@@ -1964,7 +2010,7 @@ function renderLibraryGrid(){
 
   if(designs.length === 0){
     grid.innerHTML = '<div class="empty-library">Aún no has guardado ninguna tarima.</div>';
-    populateOrderModels();
+    populateOrderModels(); refrescarSelectsDeTarimas();
     return;
   }
 
@@ -1982,7 +2028,7 @@ function renderLibraryGrid(){
     </div>
   `).join('');
 
-  populateOrderModels();
+  populateOrderModels(); refrescarSelectsDeTarimas();
 }
 
 const HEADER_INFO = {
@@ -3095,6 +3141,21 @@ async function deleteCliente(id){
 
 /* ---------- Generador de cotizaci\u00f3n ---------- */
 
+function refrescarSelectsDeTarimas(){
+  try{ populateCotSelects(); }catch(e){}
+  try{ populateVentaSelects(); }catch(e){}
+  try{ if(typeof populateEmbTarimaSelect === 'function') populateEmbTarimaSelect(); }catch(e){}
+}
+
+// Mensaje claro de qué falta para poder cotizar / registrar una venta.
+function mensajeFaltantes(accion){
+  const faltan = [];
+  if(savedClientes.length === 0) faltan.push('registrar al menos un cliente (arriba, en esta misma pestaña)');
+  if(savedDesigns.length === 0) faltan.push('guardar al menos una tarima en "Costo de Tarima" (botón Guardar diseño)');
+  return 'Para ' + accion + ' te falta: ' + faltan.join(' y ') + '.' +
+    (savedDesigns.length === 0 ? ' <button class="btn btn-primary" style="margin-left:8px; padding:4px 10px; font-size:11px;" onclick="switchTab(\'costo\')">Ir a Costo de Tarima</button>' : '');
+}
+
 function populateCotSelects(){
   const selCliente = $('cotCliente');
   const selTarima = $('cotTarima');
@@ -3102,6 +3163,7 @@ function populateCotSelects(){
   const prevTarima = selTarima.value;
 
   if(savedClientes.length === 0 || savedDesigns.length === 0){
+    $('cotEmpty').innerHTML = mensajeFaltantes('generar una cotización');
     $('cotEmpty').style.display = 'block';
     $('cotContent').style.display = 'none';
     return;
@@ -3807,6 +3869,7 @@ function populateVentaSelects(){
   const prevTarima = selTarima.value;
 
   if(savedClientes.length === 0 || savedDesigns.length === 0){
+    $('ventaEmpty').innerHTML = mensajeFaltantes('registrar una venta');
     $('ventaEmpty').style.display = 'block';
     $('ventaContent').style.display = 'none';
     return;
@@ -3882,6 +3945,7 @@ async function saveVenta(){
     await saveVentaRecord(venta);
     resetVentaForm();
     $('ventaMsg').textContent = 'Venta registrada.';
+    if(await customConfirm('Venta registrada. ¿Generar ahora el acuse de entrega para ' + cliente.empresa + '?')) abrirAcuseEntrega(venta.id, venta);
   }catch(e){
     console.error(e);
     $('ventaMsg').textContent = 'No se pudo registrar la venta. Intenta de nuevo.';
@@ -3927,7 +3991,7 @@ function renderVentasBody(){
           <td class="num">${fmtMoney(v.precio)}</td>
           <td class="num">${fmtMoney(v.total)}</td>
           <td class="dims">${origenLabel}</td>
-          <td><button class="btn-danger-icon" onclick="deleteVenta('${v.id}')" title="Eliminar">\u2715</button></td>
+          <td style="white-space:nowrap;"><button class="btn btn-ghost" style="padding:4px 8px; font-size:10px;" onclick="abrirAcuseEntrega('${v.id}')" title="Acuse de entrega">\ud83d\udcc4 ${v.acuse && v.acuse.folio ? 'Acuse ' + escapeHtml(v.acuse.folio) : 'Acuse'}</button> <button class="btn-danger-icon" onclick="deleteVenta('${v.id}')" title="Eliminar">\u2715</button></td>
         </tr>`;
       });
       body.innerHTML = html;
@@ -3995,10 +4059,243 @@ async function confirmarVentaDesdeCotizacion(id){
   try{
     await saveVentaRecord(venta);
     await db.collection('cotizaciones').doc(id).delete();
+    if(await customConfirm('Venta confirmada. ¿Generar ahora el acuse de entrega para ' + ((venta.clienteSnapshot && venta.clienteSnapshot.empresa) || 'el cliente') + '?')){
+      switchTab('ventas');
+      abrirAcuseEntrega(venta.id, venta);
+    }
   }catch(e){
     console.error(e);
     customAlert('No se pudo confirmar la venta. Intenta de nuevo.');
   }
+}
+
+
+/* ================= Acuse de entrega ================= */
+let acuseVentaId = null;
+
+async function nextEntregaFolio(){
+  const year = new Date().getFullYear();
+  const ref = db.collection('counters').doc('entrega_' + year);
+  let seq = 1;
+  try{
+    const snap = await ref.get();
+    seq = snap.exists ? (parseInt(snap.data().seq) || 1) : 1;
+  }catch(e){ /* usa 1 */ }
+  return 'ENT-' + String(seq).padStart(4,'0') + '-' + year;
+}
+
+async function commitEntregaFolio(folio){
+  const m = /^(?:.*-)?(\d{3,})-(\d{4})$/.exec((folio || '').trim());
+  if(!m) return;
+  const seq = parseInt(m[1]) + 1;
+  const ref = db.collection('counters').doc('entrega_' + m[2]);
+  try{
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const current = snap.exists ? (parseInt(snap.data().seq) || 1) : 1;
+      if(seq > current) tx.set(ref, { seq }, { merge: true });
+    });
+  }catch(e){ /* no bloquea */ }
+}
+
+// Abre el formulario del acuse con los datos de la venta (cliente, tarima, cantidad).
+// Si la venta ya tiene un acuse guardado, se cargan esos datos para reimprimirlo igual.
+async function abrirAcuseEntrega(ventaId, ventaDirecta){
+  const v = savedVentas.find(x => x.id === ventaId) || ventaDirecta;
+  if(!v){ customAlert('No se encontró esa venta.'); return; }
+  acuseVentaId = v.id;
+  const cli = v.clienteSnapshot || {};
+  const clienteActual = savedClientes.find(c => c.id === v.clienteId) || {};
+  const tarima = savedDesigns.find(d => d.id === v.tarimaId) || {};
+  const a = v.acuse || {};
+  const ahora = new Date();
+  const hora = String(ahora.getHours()).padStart(2,'0') + ':' + String(ahora.getMinutes()).padStart(2,'0');
+
+  // certificado TT más reciente de ese cliente, si existe
+  let certSugerido = '';
+  const nombreCli = (cli.empresa || '').trim().toLowerCase();
+  if(nombreCli && Array.isArray(savedCertificadosGenerados)){
+    const c = savedCertificadosGenerados.find(d => d.tipo === 'certificado' && (d.clienteNombre || '').trim().toLowerCase() === nombreCli);
+    if(c) certSugerido = c.folio || '';
+  }
+  let concepto = v.tarimaNombre || '';
+  if(tarima.heatApplied && !/tratamiento/i.test(concepto)) concepto += ' con tratamiento térmico NOM-144-SEMARNAT-2017';
+
+  $('acuFolio').value = a.folio || await nextEntregaFolio();
+  $('acuFecha').value = a.fecha || v.fecha || ahora.toISOString().slice(0,10);
+  $('acuHora').value = a.hora || '';
+  $('acuCliNombre').value = a.cliNombre || cli.empresa || '';
+  $('acuCliContacto').value = a.cliContacto || cli.contactoNombre || '';
+  $('acuCliTelefono').value = a.cliTelefono || cli.contactoNumero || '';
+  $('acuCliDomicilio').value = a.cliDomicilio || cli.ubicacion || '';
+  $('acuLugar').value = a.lugar || cli.ubicacion || '';
+  $('acuChofer').value = a.chofer || '';
+  $('acuUnidad').value = a.unidad || '';
+  $('acuCertificado').value = a.certificado || certSugerido;
+  $('acuCantidad').value = a.cantidad || v.cantidad || '';
+  $('acuConcepto').value = a.concepto || concepto;
+  $('acuDimensiones').value = a.dimensiones || '';
+  $('acuObservaciones').value = a.observaciones || '';
+  $('acuseMsg').textContent = '';
+  $('acuseVentaInfo').textContent = 'Venta del ' + formatDateDMY(parseISODateLocal(v.fecha)) + ' · ' + (cli.empresa || '') + ' · ' + v.cantidad + ' × ' + (v.tarimaNombre || '') + (a.folio ? ' · ya tiene acuse ' + a.folio : '');
+  $('acusePanel').style.display = 'block';
+  setTimeout(() => $('acusePanel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+function cerrarAcuse(){
+  $('acusePanel').style.display = 'none';
+  acuseVentaId = null;
+}
+
+async function generarAcuseEntregaPDF(){
+  const d = {
+    folio: $('acuFolio').value.trim(),
+    fecha: $('acuFecha').value,
+    hora: $('acuHora').value,
+    cliNombre: $('acuCliNombre').value.trim(),
+    cliContacto: $('acuCliContacto').value.trim(),
+    cliTelefono: $('acuCliTelefono').value.trim(),
+    cliDomicilio: $('acuCliDomicilio').value.trim(),
+    lugar: $('acuLugar').value.trim(),
+    chofer: $('acuChofer').value.trim(),
+    unidad: $('acuUnidad').value.trim(),
+    certificado: $('acuCertificado').value.trim(),
+    cantidad: parseFloat($('acuCantidad').value) || 0,
+    concepto: $('acuConcepto').value.trim(),
+    dimensiones: $('acuDimensiones').value.trim(),
+    observaciones: $('acuObservaciones').value.trim()
+  };
+  if(!d.folio){ customAlert('Ingresa el folio de entrega.'); return; }
+  if(!d.cliNombre){ customAlert('Ingresa el nombre del cliente.'); return; }
+  if(d.cantidad <= 0){ customAlert('Ingresa la cantidad entregada.'); return; }
+  if(!d.concepto){ customAlert('Ingresa el concepto de la mercancía.'); return; }
+
+  $('acuseMsg').textContent = 'Preparando PDF…';
+  try{ await ensureJsPDFLoaded(); }
+  catch(e){ $('acuseMsg').textContent = 'No se pudo cargar el generador de PDF (necesita internet). Intenta de nuevo.'; return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const margin = 18, pageW = 215.9, pageH = 279.4, contentW = pageW - margin*2;
+  const colBrown = [92,70,50], colWood = [147,117,82], colGray = [100,90,76], colLine = [215,205,190];
+  const e = getEmpresaDatosSync();
+  const lbl = (t, x, yy) => { doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...colGray); doc.text(t, x, yy); };
+  const val = (t, x, yy, size) => { doc.setFont('helvetica','bold'); doc.setFontSize(size || 10.5); doc.setTextColor(...colBrown); doc.text(String(t || '—'), x, yy); };
+  const sect = (t, yy) => { doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...colWood); doc.text(t, margin, yy); };
+  const hr = (yy, c, w) => { doc.setDrawColor(...(c || colLine)); doc.setLineWidth(w || 0.3); doc.line(margin, yy, pageW-margin, yy); };
+
+  // Formato del acuse (según el ejemplo aprobado). Campo vacío = línea para llenar a mano.
+  const blankLine = (x0, yy, w) => { doc.setDrawColor(...colGray); doc.setLineWidth(0.2); doc.line(x0, yy+1, x0+w, yy+1); };
+  const field = (l, v, x0, yy, w) => { lbl(l, x0, yy); if(v) val(v, x0, yy+5.5, 10.5); else blankLine(x0, yy+5.5, w); };
+
+  // Encabezado
+  let y = 12;
+  try{
+    const imgEl = document.querySelector('#appRoot .logo-img');
+    if(imgEl && imgEl.src){
+      const dims = await new Promise(r => { const im = new Image(); im.onload = () => r({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => r(null); im.src = imgEl.src; });
+      if(dims && dims.w) doc.addImage(imgEl.src, 'PNG', margin, y, 40, 40 * dims.h / dims.w);
+    }
+  }catch(err){ /* sin logo */ }
+  doc.setFont('helvetica','bold'); doc.setFontSize(19); doc.setTextColor(...colBrown);
+  doc.text('Comprobante de entrega', pageW-margin, y+9, { align: 'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...colGray);
+  doc.text('Acuse de entrega de mercancía', pageW-margin, y+15, { align: 'right' });
+  y += 22; hr(y, colWood, 1); y += 7;
+
+  const c3 = contentW/3, fw3 = c3 - 8;
+  field('FOLIO DE ENTREGA', d.folio, margin, y, fw3);
+  field('FECHA DE ENTREGA', d.fecha ? formatDateDMY(parseISODateLocal(d.fecha)) : '', margin+c3, y, fw3);
+  field('HORA', d.hora, margin+2*c3, y, fw3);
+  y += 11; hr(y); y += 7;
+
+  // Cliente
+  sect('DATOS DEL CLIENTE', y); y += 6;
+  field('NOMBRE / RAZÓN SOCIAL', d.cliNombre, margin, y, fw3);
+  field('CONTACTO', d.cliContacto, margin+c3, y, fw3);
+  field('TELÉFONO', d.cliTelefono, margin+2*c3, y, fw3);
+  y += 11;
+  lbl('DOMICILIO', margin, y);
+  if(d.cliDomicilio){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(...colBrown);
+    const dom = doc.splitTextToSize(d.cliDomicilio, contentW); doc.text(dom, margin, y+5.5); y += 5.5 + dom.length*4.8;
+  }else{ blankLine(margin, y+5.5, contentW); y += 10; }
+  y += 3; hr(y); y += 7;
+
+  // Entrega
+  sect('DATOS DE LA ENTREGA', y); y += 6;
+  lbl('LUGAR DE ENTREGA', margin, y);
+  if(d.lugar){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(...colBrown);
+    const lug = doc.splitTextToSize(d.lugar, contentW); doc.text(lug, margin, y+5.5); y += 5.5 + lug.length*4.8;
+  }else{ blankLine(margin, y+5.5, contentW); y += 10; }
+  y += 5;
+  field('CHOFER', d.chofer, margin, y, fw3);
+  field('UNIDAD / PLACAS', d.unidad, margin+c3, y, fw3);
+  field('CERTIFICADO TT', d.certificado, margin+2*c3, y, fw3);
+  y += 11; hr(y); y += 7;
+
+  // Mercancía
+  sect('MERCANCÍA ENTREGADA', y); y += 4;
+  const cw = [26, contentW-26-44, 44];
+  doc.setFillColor(...colBrown); doc.rect(margin, y, contentW, 7.5, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+  let x = margin; ['CANTIDAD','CONCEPTO','DIMENSIONES'].forEach((t,i) => { doc.text(t, x+3, y+5.2); x += cw[i]; });
+  y += 7.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...colBrown);
+  const ls = doc.splitTextToSize(d.concepto, cw[1]-6);
+  const rh = Math.max(8, ls.length*4.6 + 3.5);
+  doc.setDrawColor(220,212,198); doc.setLineWidth(0.2);
+  doc.rect(margin, y, cw[0], rh); doc.rect(margin+cw[0], y, cw[1], rh); doc.rect(margin+cw[0]+cw[1], y, cw[2], rh);
+  doc.text(String(d.cantidad), margin+3, y+5.5); doc.text(ls, margin+cw[0]+3, y+5.5); doc.text(d.dimensiones || '', margin+cw[0]+cw[1]+3, y+5.5);
+  y += rh + 9;
+
+  // Observaciones
+  sect('OBSERVACIONES', y); y += 3;
+  doc.setDrawColor(...colLine); doc.setLineWidth(0.3); doc.rect(margin, y, contentW, 16);
+  if(d.observaciones){ doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...colBrown); doc.text(doc.splitTextToSize(d.observaciones, contentW-6).slice(0,3), margin+3, y+5.5); }
+  y += 22;
+
+  // Declaración
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.8); doc.setTextColor(...colGray);
+  const decl = 'Por medio de la presente, el cliente hace constar que recibió de ' + e.nombre + ' la mercancía descrita en este documento, en la cantidad indicada y en buenas condiciones, a su entera satisfacción. Cualquier faltante o daño debe anotarse en el apartado de observaciones al momento de la entrega.';
+  const dl = doc.splitTextToSize(decl, contentW); doc.text(dl, margin, y); y += dl.length*4.2 + 5;
+
+  // Firma de recibido (cliente)
+  const boxH = 50;
+  doc.setDrawColor(...colWood); doc.setLineWidth(0.4); doc.rect(margin, y, contentW, boxH);
+  doc.setFillColor(...colBrown); doc.rect(margin, y, contentW, 7, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text('RECIBIÓ DE CONFORMIDAD — CLIENTE', margin+3, y+4.9);
+  const lineW = 80, lx = pageW/2 - lineW/2;
+  [['NOMBRE', y+22], ['FIRMA', y+42]].forEach(([t, ly]) => {
+    doc.setDrawColor(...colGray); doc.setLineWidth(0.3); doc.line(lx, ly, lx+lineW, ly);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...colGray);
+    doc.text(t, pageW/2, ly+4, { align: 'center' });
+  });
+
+  // Pie
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...colGray);
+  doc.text([e.nombre, e.direccion, e.telefono, e.correo].filter(Boolean).join(' | '), pageW/2, pageH-8, { align: 'center' });
+
+  const filename = 'Acuse_' + slugArchivoCliente(d.cliNombre) + '_' + d.folio.replace(/[^A-Za-z0-9-]/g,'') + '.pdf';
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Guarda los datos del acuse en la venta (para reimprimirlo igual) y avanza el folio.
+  if(acuseVentaId){
+    try{ await db.collection('ventas').doc(acuseVentaId).set({ acuse: Object.assign({}, d, { generadoAt: new Date().toISOString() }) }, { merge: true }); }
+    catch(err){ console.error(err); }
+  }
+  await commitEntregaFolio(d.folio);
+  $('acuseMsg').textContent = 'Acuse "' + d.folio + '" descargado.';
 }
 
 /* ================= Certificado de Tratamiento Térmico ================= */
