@@ -880,6 +880,34 @@
     </div>
   </div>
 
+  <div class="section-title">Sello HT</div>
+
+  <div class="nails-panel">
+    <label class="switch">
+      <input type="checkbox" id="stampApplied" onchange="toggleExtraFields(); render();">
+      <span class="track"></span>
+      <span class="label-text">🔖 Se le pone sello HT</span>
+    </label>
+    <div class="recycled-cost-field" id="stampCostField">
+      <label for="stampCost">Costo del sello ($/tarima)</label>
+      <input type="number" id="stampCost" min="0" step="0.01" placeholder="0.00" oninput="render()">
+    </div>
+  </div>
+
+  <div class="section-title">Pintura</div>
+
+  <div class="nails-panel">
+    <label class="switch">
+      <input type="checkbox" id="paintApplied" onchange="toggleExtraFields(); render();">
+      <span class="track"></span>
+      <span class="label-text">🎨 Se pinta la tarima</span>
+    </label>
+    <div class="recycled-cost-field" id="paintCostField">
+      <label for="paintCost">Costo de pintura ($/tarima)</label>
+      <input type="number" id="paintCost" min="0" step="0.01" placeholder="0.00" oninput="render()">
+    </div>
+  </div>
+
   <div class="section-title">Lista de corte</div>
 
   <div class="table-scroll">
@@ -908,6 +936,8 @@
       <div class="row"><span>Costo madera</span><span id="woodCost">$0.00</span></div>
       <div class="row"><span>Costo clavos</span><span id="nailsCostTotal">$0.00</span></div>
       <div class="row" id="heatRow" style="display:none;"><span>Tratamiento térmico</span><span id="heatCostTotal">$0.00</span></div>
+      <div class="row" id="stampRow" style="display:none;"><span>Sello HT</span><span id="stampCostTotal">$0.00</span></div>
+      <div class="row" id="paintRow" style="display:none;"><span>Pintura</span><span id="paintCostTotal">$0.00</span></div>
       <div class="row grand"><span>Costo total</span><span id="totalCost">$0.00</span></div>
     </div>
   </div>
@@ -975,6 +1005,8 @@
           <div class="row"><span>Cajas de clavos necesarias</span><span id="orderNailBoxes">0</span></div>
           <div class="row"><span>Costo clavos</span><span id="orderNailsCost">$0.00</span></div>
           <div class="row" id="orderHeatRow" style="display:none;"><span>Tratamiento térmico</span><span id="orderHeatCost">$0.00</span></div>
+          <div class="row" id="orderStampRow" style="display:none;"><span>Sello HT</span><span id="orderStampCost">$0.00</span></div>
+          <div class="row" id="orderPaintRow" style="display:none;"><span>Pintura</span><span id="orderPaintCost">$0.00</span></div>
           <div class="row grand"><span>Costo total del pedido</span><span id="orderGrandTotal">$0.00</span></div>
         </div>
       </div>
@@ -991,7 +1023,7 @@
         <li><b>Gráfico:</b> título "Gráfico de temperatura", fondo del área azul claro, marco en los 4 lados, cuadrícula blanca. Eje X cada 5 min, etiquetas rotadas 45° pegadas a los bordes. Eje Y cada 5°C con símbolo ° y título "°C". Línea roja punteada de referencia en 56°C. T1 negro, T2 verde, T3 azul (si aplica), todas con marcadores circulares. Leyenda con cuadros de color. Sin fecha.</li>
         <li><b>Tabla:</b> columnas Hora | T1 (°C) | T2 (°C) | T3 (°C) según aplique, temperaturas redondeadas a enteros. Filas resaltadas en verde donde todas las series superen los 56°C al mismo tiempo.</li>
         <li><b>Word (.doc):</b> gráfico + tabla en un solo documento, con nota de pie con el tiempo total (minutos) que todas las series superaron los 56°C juntas, indicando hora de inicio y fin. El tiempo = filas resaltadas × 5 minutos. El texto se ajusta a 2 o 3 series automáticamente.</li>
-        <li><b>Certificado PDF:</b> incluye titular del horno, sello, folio y fecha, datos del cliente, detalle del embalaje tratado, la gráfica y la tabla de temperaturas, con el logo y los colores de TAGROW.</li>
+        <li><b>Certificado PDF:</b> incluye titular del horno, sello, folio y fecha, datos del cliente, detalle del embalaje tratado, la gráfica y la tabla de temperaturas, con el logo y los colores de TAGROW. Se crean las cargas del horno que hagan falta; cada carga lleva sus tarimas y su propio archivo de temperaturas. La portada lleva el total del pedido y cada carga tiene su propia página con gráfica y tabla.</li>
       </ul>
     </details>
 
@@ -1082,45 +1114,38 @@
       </div>
     </div>
 
-    <div class="section-title">Datos de temperatura</div>
+    <div class="section-title">Cargas del horno y datos de temperatura</div>
     <div class="tag-form" style="border-style:solid;">
-      <label style="font-family:var(--mono); font-size:11px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:8px;">
-        Sube el archivo con las lecturas de los sensores: Word (.docx), CSV o TXT. Si es Word, se busca automáticamente una tabla o texto con Hora, T1, T2 y T3.
-      </label>
-
-      <input type="file" id="graficoFileInput" accept=".csv,.txt,.docx" style="display:none;" onchange="handleGraficoFileUpload(event)">
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
-        <button class="btn btn-primary" onclick="document.getElementById('graficoFileInput').click()">📁 Subir archivo de datos</button>
-        <span id="graficoFileName" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Ningún archivo seleccionado</span>
+      <div style="font-family:var(--body); font-size:12px; color:var(--paper-dim); margin-bottom:12px;">
+        Crea una carga por cada vez que entró producto al horno. En cada carga escribe cuántas tarimas entraron y sube su archivo del registrador (.dat, .txt, .csv o Word .docx). La gráfica de cada carga se genera al subir su archivo. El certificado lleva el total del pedido en la portada y una gráfica y tabla por cada carga.
+      </div>
+      <div class="settings-bar" style="margin-bottom:14px;">
+        <div class="field">
+          <label for="numCargas">¿Cuántas cargas?</label>
+          <input type="number" id="numCargas" min="1" max="20" step="1" value="1">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" onclick="crearCargas()">Crear cargas</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn-ghost" onclick="agregarCargaVacia()">+ Agregar una carga</button>
+        </div>
       </div>
 
-      <textarea id="graficoData" rows="8" readonly placeholder="Los datos del archivo que subas aparecerán aquí…" style="width:100%; background:var(--bg); border:1px solid var(--line); color:var(--paper); font-family:var(--mono); font-size:13px; padding:10px; border-radius:4px; resize:vertical;"></textarea>
+      <div id="cargasList"></div>
+      <div id="cargasResumen" style="font-family:var(--mono); font-size:12px; color:var(--paper-dim); margin-top:10px;"></div>
 
       <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="prepararGraficoSemarnat()">▶ GENERAR GRÁFICA Y TABLA</button>
-        <button class="btn btn-ghost" onclick="clearGrafico()">🗑 Limpiar</button>
+        <button class="btn btn-primary" onclick="renderGraficasCargas(true)">▶ GENERAR GRÁFICAS</button>
+        <button class="btn btn-primary" onclick="generarCertificadoTratamientoPDF()">📄 Certificado con todas las cargas (PDF)</button>
+        <button class="btn btn-ghost" onclick="limpiarCargasHorno()">🗑 Quitar todas las cargas</button>
       </div>
       <div id="graficoMsg" style="font-family:var(--mono); font-size:12px; color:var(--orange); margin-top:10px;"></div>
     </div>
 
-    <div id="graficoOutput" style="display:none;">
-      <div class="section-title">Gráfico de temperatura</div>
-      <div id="chartContainer" style="background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; overflow-x:auto;"></div>
-
-      <div class="section-title">Tabla de temperaturas</div>
-      <div class="table-scroll">
-      <table class="cutlist" id="graficoTable"></table>
-      </div>
-
-      <div class="section-title">Nota de pie (reporte)</div>
-      <div style="background:var(--panel); border:1px solid var(--wood); border-radius:8px; padding:14px 18px; font-family:var(--body); font-size:13px; color:var(--paper);" id="graficoFootnote"></div>
-
-      <div class="section-title" style="margin-top:20px;">¿Qué quieres descargar?</div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn btn-ghost" onclick="downloadSemarnatWord()">⬇ Solo la gráfica (Word)</button>
-        <button class="btn btn-primary" onclick="generarCertificadoTratamientoPDF()">📄 Certificado completo de tratamiento térmico (PDF)</button>
-      </div>
-    </div>
+    <div id="graficasCargas"></div>
 
     <div class="section-title" style="margin-top:26px;">Certificados y gráficas generadas (todo el equipo)</div>
     <div class="table-scroll">
@@ -1590,6 +1615,9 @@ let savedCotizaciones = [];
 let savedGastos = [];
 let savedVentas = [];
 let embalajeItems = [];
+let cargasHorno = []; // varias cargas del horno (gráficas) para un mismo certificado
+let fechaArchivoDetectada = null; // fecha leída del archivo del registrador, si trae
+let semarnatState = null; // ya no se usa (antes: una sola gráfica); se deja por compatibilidad
 
 const CERTIFICADO_CONFIG_DEFAULTS = { titular: 'TAGROW', sello: '' };
 let gastoFacturaPending = null;
@@ -1677,6 +1705,11 @@ function toggleRecycledField(){
 function toggleHeatField(){
   const checked = $('heatTreated').checked;
   $('heatCostField').classList.toggle('visible', checked);
+}
+
+function toggleExtraFields(){
+  $('stampCostField').classList.toggle('visible', $('stampApplied').checked);
+  $('paintCostField').classList.toggle('visible', $('paintApplied').checked);
 }
 
 function addPiece(){
@@ -1781,6 +1814,15 @@ function heatInfo(){
   return { applied, cost };
 }
 
+// Sello HT y pintura: costo extra por tarima, cada uno con su interruptor.
+function extrasInfo(){
+  const stampApplied = $('stampApplied').checked;
+  const paintApplied = $('paintApplied').checked;
+  const stampCost = stampApplied ? (parseFloat($('stampCost').value) || 0) : 0;
+  const paintCost = paintApplied ? (parseFloat($('paintCost').value) || 0) : 0;
+  return { stampApplied, stampCost, paintApplied, paintCost, total: stampCost + paintCost };
+}
+
 function render(){
   const body = $('cutlistBody');
   const costPerFoot = parseFloat($('costPerFoot').value) || 0;
@@ -1823,7 +1865,13 @@ function render(){
   $('heatRow').style.display = heat.applied ? 'flex' : 'none';
   $('heatCostTotal').textContent = '$' + heat.cost.toFixed(2);
 
-  const totalCost = woodCost + nails.totalNailsCost + heat.cost;
+  const extras = extrasInfo();
+  $('stampRow').style.display = extras.stampApplied ? 'flex' : 'none';
+  $('stampCostTotal').textContent = '$' + extras.stampCost.toFixed(2);
+  $('paintRow').style.display = extras.paintApplied ? 'flex' : 'none';
+  $('paintCostTotal').textContent = '$' + extras.paintCost.toFixed(2);
+
+  const totalCost = woodCost + nails.totalNailsCost + heat.cost + extras.total;
 
   $('totalPieces').textContent = totalPieces;
   $('totalBF').textContent = totalBF.toFixed(4);
@@ -1851,7 +1899,12 @@ function clearForm(){
   $('tarimaName').value = '';
   $('heatTreated').checked = false;
   $('heatCost').value = '';
+  $('stampApplied').checked = false;
+  $('stampCost').value = '';
+  $('paintApplied').checked = false;
+  $('paintCost').value = '';
   toggleHeatField();
+  toggleExtraFields();
   render();
 }
 
@@ -1866,13 +1919,16 @@ async function saveDesign(){
   const woodCost = pieces.reduce((s,p) => s + pieceCostEach(p, costPerFoot) * p.qty, 0);
   const nails = nailsInfo();
   const heat = heatInfo();
-  const totalCost = woodCost + nails.totalNailsCost + heat.cost;
+  const extras = extrasInfo();
+  const totalCost = woodCost + nails.totalNailsCost + heat.cost + extras.total;
 
   const id = editingId || ('design_' + Date.now());
   const design = {
     id, name, pieces, costPerFoot, totalBF, totalCost, savedAt: new Date().toISOString(),
     nailsQty: nails.qty, nailsPerBox: nails.perBox, boxPrice: nails.boxPrice,
-    heatApplied: heat.applied, heatCost: heat.cost
+    heatApplied: heat.applied, heatCost: heat.cost,
+    stampApplied: extras.stampApplied, stampCost: extras.stampCost,
+    paintApplied: extras.paintApplied, paintCost: extras.paintCost
   };
 
   design.updatedBy = currentUser ? currentUser.email : null;
@@ -2070,7 +2126,16 @@ function renderOrder(){
 
   $('orderHeatRow').style.display = heatApplied ? 'flex' : 'none';
 
-  const grandTotal = woodCost + nailsCostTotal + heatCostTotal;
+  const stampApplied = !!design.stampApplied;
+  const stampCostTotal = stampApplied ? (design.stampCost || 0) * qty : 0;
+  const paintApplied = !!design.paintApplied;
+  const paintCostTotal = paintApplied ? (design.paintCost || 0) * qty : 0;
+  $('orderStampRow').style.display = stampApplied ? 'flex' : 'none';
+  $('orderPaintRow').style.display = paintApplied ? 'flex' : 'none';
+  $('orderStampCost').textContent = '$' + stampCostTotal.toFixed(2);
+  $('orderPaintCost').textContent = '$' + paintCostTotal.toFixed(2);
+
+  const grandTotal = woodCost + nailsCostTotal + heatCostTotal + stampCostTotal + paintCostTotal;
 
   $('orderPallets').textContent = qty;
   $('orderTotalPieces').textContent = totalPieces;
@@ -2100,7 +2165,12 @@ async function loadDesign(id){
     $('boxPrice').value = d.boxPrice || '';
     $('heatTreated').checked = !!d.heatApplied;
     $('heatCost').value = d.heatCost || '';
+    $('stampApplied').checked = !!d.stampApplied;
+    $('stampCost').value = d.stampCost || '';
+    $('paintApplied').checked = !!d.paintApplied;
+    $('paintCost').value = d.paintCost || '';
     toggleHeatField();
+    toggleExtraFields();
     render();
     window.scrollTo({top:0, behavior:'smooth'});
   }catch(e){
@@ -2177,19 +2247,7 @@ async function iniciarDatosCompartidos(){
 
 /* ================= Graficador Tratamiento Térmico (SEMARNAT) ================= */
 
-let semarnatState = null; // holds parsed data + built artifacts for export
 
-function clearGrafico(){
-  $('graficoData').value = '';
-  $('graficoFileInput').value = '';
-  $('graficoFileName').textContent = 'Ningún archivo seleccionado';
-  $('graficoMsg').textContent = '';
-  $('graficoOutput').style.display = 'none';
-  $('chartContainer').innerHTML = '';
-  $('graficoTable').innerHTML = '';
-  $('graficoFootnote').textContent = '';
-  semarnatState = null;
-}
 
 // Lee un archivo de texto detectando su codificación real (UTF-8, UTF-16LE, UTF-16BE)
 // a partir del BOM. Muchos exportadores de sensores/Excel guardan el .txt como
@@ -2211,40 +2269,6 @@ async function readTextFileSmart(file){
   return new TextDecoder(encoding).decode(bytes.slice(offset));
 }
 
-async function handleGraficoFileUpload(event){
-  const file = event.target.files && event.target.files[0];
-  if(!file) return;
-  $('graficoFileName').textContent = file.name;
-  $('graficoMsg').textContent = 'Leyendo archivo…';
-
-  const ext = file.name.toLowerCase().split('.').pop();
-
-  if(ext === 'docx'){
-    handleWordFileUpload(file);
-    return;
-  }
-
-  if(ext === 'doc'){
-    $('graficoMsg').textContent = 'Este es un .doc antiguo (formato binario de Word) y no se puede leer en el navegador. Abre el archivo en Word y guárdalo como .docx, o expórtalo a CSV/TXT.';
-    return;
-  }
-
-  // csv / txt: leer detectando la codificación real, luego intentar auto-convertir
-  // el formato "por bloque de sensor" (Sensor · Índice · Fecha/Hora · Valor)
-  try{
-    const raw = await readTextFileSmart(file);
-    const converted = tryParseLongFormatSensorFile(raw);
-    if(converted){
-      $('graficoData').value = converted;
-      $('graficoMsg').textContent = 'Archivo cargado y convertido automáticamente (formato de sensores por bloque). Da clic en "GENERAR GRÁFICA Y TABLA".';
-    } else {
-      $('graficoData').value = raw;
-      $('graficoMsg').textContent = 'Archivo cargado. Da clic en "GENERAR GRÁFICA Y TABLA" y luego elige qué descargar.';
-    }
-  }catch(e){
-    $('graficoMsg').textContent = 'No se pudo leer el archivo. Verifica que sea un .csv o .txt válido.';
-  }
-}
 
 let mammothLoadPromise = null;
 let jsPDFLoadPromise = null;
@@ -2277,36 +2301,6 @@ function ensureMammothLoaded(){
   return mammothLoadPromise;
 }
 
-async function handleWordFileUpload(file){
-  $('graficoMsg').textContent = 'Preparando lector de archivos Word…';
-  try{
-    await ensureMammothLoaded();
-  }catch(e){
-    $('graficoMsg').textContent = 'No se pudo cargar el lector de archivos Word (necesita internet la primera vez). Sube el archivo como .csv o .txt mientras tanto.';
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    mammoth.convertToHtml({ arrayBuffer: e.target.result })
-      .then(result => {
-        const csvLines = extractSemarnatLinesFromHtml(result.value);
-        if(!csvLines){
-          $('graficoMsg').textContent = 'No se encontraron lecturas con formato Hora, T1, T2 (T3) dentro del Word. Revisa que el documento tenga esos datos en una tabla o en líneas de texto.';
-          return;
-        }
-        $('graficoData').value = csvLines;
-        $('graficoMsg').textContent = 'Datos extraídos del Word. Da clic en "GENERAR GRÁFICA Y TABLA" y luego elige qué descargar.';
-      })
-      .catch(() => {
-        $('graficoMsg').textContent = 'No se pudo leer el contenido del archivo Word. Verifica que sea un .docx válido.';
-      });
-  };
-  reader.onerror = () => {
-    $('graficoMsg').textContent = 'No se pudo leer el archivo Word.';
-  };
-  reader.readAsArrayBuffer(file);
-}
 
 // Busca lecturas Hora/T1/T2/T3 dentro del HTML convertido de un Word: primero intenta
 // tablas, y si no encuentra nada útil, cae en un barrido de texto línea por línea.
@@ -2456,6 +2450,18 @@ function tryParseLongFormatSensorFile(text){
     const timeMatch = datetime.match(/(\d{1,2}:\d{2})/);
     if(!timeMatch) continue;
 
+    if(!fechaArchivoDetectada){
+      // El registrador guarda la fecha como M/D/AAAA (ej. 10/8/2026 = 8 de octubre).
+      const dm = datetime.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(dm){
+        let mes = parseInt(dm[1]), dia = parseInt(dm[2]);
+        if(mes > 12 && dia <= 12){ const t = mes; mes = dia; dia = t; }
+        if(mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31){
+          fechaArchivoDetectada = dm[3] + '-' + String(mes).padStart(2,'0') + '-' + String(dia).padStart(2,'0');
+        }
+      }
+    }
+
     records.push({ sensor, hora: timeMatch[1], value });
   }
 
@@ -2465,57 +2471,198 @@ function tryParseLongFormatSensorFile(text){
 
 // Ejecuta las instrucciones fijas de SEMARNAT: parsea los datos, arma gráfico + tabla,
 // y deja todo listo en pantalla. Devuelve true si pudo generar el reporte.
-function generateSemarnatOutputs(){
-  const msg = $('graficoMsg');
-  msg.textContent = '';
-
-  const rawData = $('graficoData').value;
-  const rows = parseSemarnatData(rawData);
-
-  if(rows.length === 0){
-    msg.textContent = 'No se encontraron lecturas válidas. Sube un archivo con el formato Hora,T1,T2,T3 (una por línea).';
-    $('graficoOutput').style.display = 'none';
-    return false;
-  }
-
-  const hasT3 = rows.some(r => r.t3 !== null);
-
-  // Determine which rows have ALL present series above 56
-  rows.forEach(r => {
-    const seriesAbove = [r.t1 > 56, r.t2 > 56];
-    if(hasT3) seriesAbove.push(r.t3 !== null ? (r.t3 > 56) : false);
-    r.highlighted = seriesAbove.every(Boolean);
-  });
-
-  const highlightedRows = rows.filter(r => r.highlighted);
-  const totalMinutes = highlightedRows.length * 5;
-  const startHora = highlightedRows.length ? highlightedRows[0].hora : null;
-  const endHora = highlightedRows.length ? highlightedRows[highlightedRows.length - 1].hora : null;
-
-  const seriesLabel = hasT3 ? 'T1, T2 y T3' : 'T1 y T2';
-  let footnoteText;
-  if(highlightedRows.length === 0){
-    footnoteText = `Las series (${seriesLabel}) no superaron los 56°C de manera simultánea durante el periodo registrado.`;
-  } else {
-    footnoteText = `Las series ${seriesLabel} superaron simultáneamente los 56°C durante un total de ${totalMinutes} minutos, del ${startHora} al ${endHora}.`;
-  }
-
-  const svg = buildSemarnatChartSVG(rows, hasT3);
-  $('chartContainer').innerHTML = svg;
-
-  $('graficoTable').innerHTML = buildSemarnatTableHTML(rows, hasT3, true);
-  $('graficoFootnote').textContent = footnoteText;
-  $('graficoOutput').style.display = 'block';
-
-  semarnatState = { rows, hasT3, footnoteText };
-  return true;
-}
 
 // Botón "GENERAR GRÁFICA Y TABLA": genera la vista previa; abajo se elige qué descargar.
-function prepararGraficoSemarnat(){
-  const ok = generateSemarnatOutputs();
-  if(!ok) return;
-  $('graficoMsg').textContent = '✓ Gráfico y tabla generados. Elige abajo qué descargar.';
+
+// Ventana que aparece al generar cada gráfica: cuántas tarimas entraron en esa
+// carga del horno y en qué fecha. "Solo ver la gráfica" no agrega nada.
+
+
+/* ---------- Lectura de archivos del registrador ---------- */
+// Devuelve el CSV interno (Hora,T1,T2,T3) de un archivo .dat/.txt/.csv/.docx.
+async function leerArchivoSensores(file){
+  const ext = file.name.toLowerCase().split('.').pop();
+  if(ext === 'doc') throw new Error('Este es un .doc antiguo de Word y no se puede leer. Ábrelo en Word y guárdalo como .docx.');
+  if(ext === 'docx'){
+    try{ await ensureMammothLoaded(); }
+    catch(e){ throw new Error('No se pudo cargar el lector de Word (necesita internet). Usa el .dat o .txt.'); }
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+    const csv = extractSemarnatLinesFromHtml(result.value);
+    if(!csv) throw new Error('No se encontraron lecturas Hora, T1, T2 (T3) dentro del Word.');
+    return csv;
+  }
+  const raw = await readTextFileSmart(file);
+  return tryParseLongFormatSensorFile(raw) || raw;
+}
+
+// Marca las filas donde todas las series superan 56°C y arma la nota.
+function analizarLecturas(rows){
+  const hasT3 = rows.some(r => r.t3 !== null);
+  rows.forEach(r => {
+    const s = [r.t1 > 56, r.t2 > 56];
+    if(hasT3) s.push(r.t3 !== null ? (r.t3 > 56) : false);
+    r.highlighted = s.every(Boolean);
+  });
+  const hl = rows.filter(r => r.highlighted);
+  const seriesLabel = hasT3 ? 'T1, T2 y T3' : 'T1 y T2';
+  const footnoteText = hl.length === 0
+    ? `Las series (${seriesLabel}) no superaron los 56°C de manera simultánea durante el periodo registrado.`
+    : `Las series ${seriesLabel} superaron simultáneamente los 56°C durante un total de ${hl.length * 5} minutos, del ${hl[0].hora} al ${hl[hl.length-1].hora}.`;
+  return { rows, hasT3, footnoteText };
+}
+
+/* ---------- Cargas del horno: cada una con sus tarimas y su archivo ---------- */
+function nuevaCarga(){
+  return { id: 'carga_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), tarimas: '', fecha: '', fileName: '', rows: null, hasT3: false, footnoteText: '', msg: '' };
+}
+
+async function crearCargas(){
+  const n = Math.max(1, Math.min(20, parseInt($('numCargas').value) || 1));
+  if(n < cargasHorno.length){
+    const conDatos = cargasHorno.slice(n).some(c => c.rows);
+    if(conDatos){
+      const ok = await customConfirm('Vas a quitar ' + (cargasHorno.length - n) + ' carga(s) que ya tienen archivo. ¿Continuar?');
+      if(!ok) return;
+    }
+    cargasHorno = cargasHorno.slice(0, n);
+  }
+  while(cargasHorno.length < n) cargasHorno.push(nuevaCarga());
+  renderCargasHorno();
+  renderGraficasCargas();
+}
+
+function agregarCargaVacia(){
+  cargasHorno.push(nuevaCarga());
+  $('numCargas').value = cargasHorno.length;
+  renderCargasHorno();
+}
+
+async function quitarCargaHorno(id){
+  const c = cargasHorno.find(x => x.id === id);
+  if(c && c.rows){
+    const ok = await customConfirm('¿Quitar esta carga y su gráfica?');
+    if(!ok) return;
+  }
+  cargasHorno = cargasHorno.filter(x => x.id !== id);
+  $('numCargas').value = Math.max(cargasHorno.length, 1);
+  renderCargasHorno();
+  renderGraficasCargas();
+}
+
+async function limpiarCargasHorno(){
+  if(cargasHorno.some(c => c.rows || c.tarimas)){
+    const ok = await customConfirm('¿Quitar todas las cargas y sus gráficas?');
+    if(!ok) return;
+  }
+  cargasHorno = [nuevaCarga()];
+  $('numCargas').value = 1;
+  renderCargasHorno();
+  renderGraficasCargas();
+}
+
+function actualizarCarga(id, campo, valor){
+  const c = cargasHorno.find(x => x.id === id);
+  if(!c) return;
+  c[campo] = campo === 'tarimas' ? (parseInt(valor) || '') : valor;
+  actualizarResumenCargas();
+  renderGraficasCargas();
+}
+
+async function subirArchivoCarga(id, event){
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  const c = cargasHorno.find(x => x.id === id);
+  if(!file || !c) return;
+  c.fileName = file.name;
+  c.msg = 'Leyendo archivo…';
+  renderCargasHorno();
+  try{
+    fechaArchivoDetectada = null;
+    const csv = await leerArchivoSensores(file);
+    const rows = parseSemarnatData(csv);
+    if(rows.length === 0) throw new Error('No se encontraron lecturas válidas en este archivo.');
+    const a = analizarLecturas(rows);
+    c.rows = a.rows; c.hasT3 = a.hasT3; c.footnoteText = a.footnoteText;
+    if(fechaArchivoDetectada) c.fecha = fechaArchivoDetectada;
+    else if(!c.fecha) c.fecha = $('certFecha').value || new Date().toISOString().slice(0,10);
+    const r = resumenCarga(c.rows);
+    c.msg = '✓ ' + c.rows.length + ' lecturas · ' + r.minutos + ' min a 56°C o más' + (r.desde ? ' (' + r.desde + '–' + r.hasta + ')' : '');
+  }catch(e){
+    console.error(e);
+    c.rows = null;
+    c.msg = '⚠ ' + (e && e.message ? e.message : 'No se pudo leer el archivo.');
+  }
+  renderCargasHorno();
+  renderGraficasCargas();
+}
+
+function actualizarResumenCargas(){
+  const el = $('cargasResumen');
+  if(!el) return;
+  const suma = cargasHorno.reduce((s, c) => s + (parseInt(c.tarimas) || 0), 0);
+  const conArchivo = cargasHorno.filter(c => c.rows).length;
+  const total = totalTarimasEmbalaje();
+  let txt = cargasHorno.length + ' carga(s) · ' + conArchivo + ' con archivo · tarimas en cargas: ' + suma;
+  if(total > 0){
+    txt += ' · total del pedido: ' + total;
+    txt += total === suma ? ' ✓' : ' — ⚠ no coinciden';
+  }
+  el.textContent = txt;
+}
+
+function renderCargasHorno(){
+  const list = $('cargasList');
+  if(!list) return;
+  if(cargasHorno.length === 0) cargasHorno.push(nuevaCarga());
+  list.innerHTML = cargasHorno.map((c, i) => `
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px; background:var(--panel);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-family:var(--display); font-size:14px; letter-spacing:1px; text-transform:uppercase; color:var(--wood);">Carga ${i+1}</span>
+        <button class="btn-danger-icon" onclick="quitarCargaHorno('${c.id}')" title="Quitar carga">✕</button>
+      </div>
+      <div class="settings-bar" style="margin-bottom:6px;">
+        <div class="field">
+          <label for="tar_${c.id}">Tarimas</label>
+          <input type="number" id="tar_${c.id}" min="1" step="1" placeholder="Ej. 140" value="${c.tarimas}" onchange="actualizarCarga('${c.id}','tarimas',this.value)">
+        </div>
+        <div class="field">
+          <label for="fec_${c.id}">Fecha</label>
+          <input type="date" id="fec_${c.id}" value="${c.fecha}" onchange="actualizarCarga('${c.id}','fecha',this.value)">
+        </div>
+        <div class="field" style="min-width:220px;">
+          <label>Archivo de temperaturas</label>
+          <input type="file" id="file_${c.id}" accept=".dat,.txt,.csv,.docx" style="display:none;" onchange="subirArchivoCarga('${c.id}', event)">
+          <button class="btn ${c.rows ? 'btn-ghost' : 'btn-primary'}" onclick="document.getElementById('file_${c.id}').click()">📁 ${c.rows ? 'Cambiar archivo' : 'Subir archivo'}</button>
+        </div>
+      </div>
+      <div style="font-family:var(--mono); font-size:12px; color:var(--paper-dim);">${escapeHtml(c.fileName || 'Sin archivo')}</div>
+      ${c.msg ? `<div style="font-family:var(--mono); font-size:12px; color:${c.rows ? 'var(--paper)' : 'var(--orange)'}; margin-top:4px;">${escapeHtml(c.msg)}</div>` : ''}
+    </div>`).join('');
+  actualizarResumenCargas();
+}
+
+// Muestra la gráfica, nota y tabla de cada carga que ya tiene archivo.
+function renderGraficasCargas(manual){
+  const cont = $('graficasCargas');
+  if(!cont) return;
+  const listas = cargasHorno.map((c, i) => ({ c, i })).filter(x => x.c.rows);
+  if(listas.length === 0){
+    cont.innerHTML = '';
+    if(manual) $('graficoMsg').textContent = 'Sube el archivo de al menos una carga para generar su gráfica.';
+    return;
+  }
+  cont.innerHTML = listas.map(({ c, i }) => `
+    <div class="section-title" style="margin-top:22px;">Carga ${i+1}${c.tarimas ? ' — ' + c.tarimas + ' tarimas' : ''}${c.fecha ? ' — ' + escapeHtml(formatDateDMY(parseISODateLocal(c.fecha))) : ''}</div>
+    <div style="background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; overflow-x:auto;">${buildSemarnatChartSVG(c.rows, c.hasT3)}</div>
+    <div style="background:var(--panel); border:1px solid var(--wood); border-radius:8px; padding:12px 16px; margin-top:10px; font-family:var(--body); font-size:13px; color:var(--paper);">${escapeHtml(c.footnoteText)}</div>
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer; font-family:var(--mono); font-size:12px; color:var(--paper-dim);">Ver tabla de temperaturas</summary>
+      <div class="table-scroll" style="margin-top:8px;"><table class="cutlist">${buildSemarnatTableHTML(c.rows, c.hasT3, true)}</table></div>
+    </details>
+    <div style="margin-top:10px;"><button class="btn btn-ghost" onclick="downloadSemarnatWord(${i})">⬇ Solo la gráfica de esta carga (Word)</button></div>
+  `).join('');
+  if(manual) $('graficoMsg').textContent = '✓ ' + listas.length + ' gráfica(s) generada(s).';
 }
 
 function buildSemarnatChartSVG(rows, hasT3){
@@ -2669,9 +2816,10 @@ function svgToPngDataUrl(svgString, width, height){
   });
 }
 
-async function downloadSemarnatWord(){
-  if(!semarnatState) return;
-  const { rows, hasT3, footnoteText } = semarnatState;
+async function downloadSemarnatWord(idx){
+  const carga = cargasHorno[idx];
+  if(!carga || !carga.rows) return;
+  const { rows, hasT3, footnoteText } = carga;
 
   const svg = buildSemarnatChartSVG(rows, hasT3);
   let pngDataUrl;
@@ -3919,6 +4067,7 @@ function renderEmbalajeTable(){
   if(!body) return;
   if(embalajeItems.length === 0){
     body.innerHTML = '<tr class="empty-row"><td colspan="4">Aún no has agregado renglones del embalaje.</td></tr>';
+    actualizarResumenCargas();
     return;
   }
   body.innerHTML = embalajeItems.map(it => `<tr>
@@ -3927,6 +4076,7 @@ function renderEmbalajeTable(){
     <td class="dims">${escapeHtml(it.dimensiones)}</td>
     <td><button class="btn-danger-icon" onclick="removeEmbalajeItem('${it.id}')" title="Eliminar">✕</button></td>
   </tr>`).join('');
+  actualizarResumenCargas();
 }
 
 async function limpiarDatosCertificado(){
@@ -3937,14 +4087,41 @@ async function limpiarDatosCertificado(){
   embalajeItems = [];
   renderEmbalajeTable();
   $('certFolio').value = '';
+  cargasHorno = [nuevaCarga()];
+  $('numCargas').value = 1;
+  renderCargasHorno();
+  renderGraficasCargas();
   await fillNextHtFolioIntoField();
 }
+
+/* ---------- Cargas del horno (varias gráficas en un mismo certificado) ---------- */
+
+function resumenCarga(rows){
+  const highlighted = rows.filter(r => r.highlighted);
+  return {
+    horaInicio: rows.length ? rows[0].hora : '—',
+    horaTermino: rows.length ? rows[rows.length-1].hora : '—',
+    horaAlcance: highlighted.length ? highlighted[0].hora : '—',
+    minutos: highlighted.length * 5,
+    desde: highlighted.length ? highlighted[0].hora : null,
+    hasta: highlighted.length ? highlighted[highlighted.length-1].hora : null
+  };
+}
+
+function totalTarimasEmbalaje(){
+  return embalajeItems.reduce((s, it) => s + (parseFloat(it.cantidad) || 0), 0);
+}
+
+
+
+
 
 async function prepararCertificadoDefaults(){
   if(!$('certFecha').value) $('certFecha').value = new Date().toISOString().slice(0,10);
   if(!$('certFolio').value) await fillNextHtFolioIntoField();
   populateCertClienteSelect();
   populateEmbTarimaSelect();
+  renderCargasHorno();
 }
 
 async function nextHtFolio(){
@@ -3979,9 +4156,21 @@ async function commitHtFolioFromString(folio){
 }
 
 async function generarCertificadoTratamientoPDF(){
-  if(!semarnatState){
-    customAlert('Primero genera la gráfica y tabla con los datos de temperatura (botón "GENERAR GRÁFICA Y TABLA").');
-    return;
+  {
+    const sinArchivo = cargasHorno.findIndex(c => !c.rows);
+    if(cargasHorno.length === 0 || cargasHorno.every(c => !c.rows)){
+      customAlert('Sube el archivo de temperaturas de al menos una carga.');
+      return;
+    }
+    if(sinArchivo !== -1){
+      customAlert('A la carga ' + (sinArchivo+1) + ' le falta su archivo de temperaturas. Súbelo o quita esa carga.');
+      return;
+    }
+    const sinTarimas = cargasHorno.findIndex(c => !(parseInt(c.tarimas) > 0));
+    if(sinTarimas !== -1){
+      customAlert('Escribe cuántas tarimas entraron en la carga ' + (sinTarimas+1) + '.');
+      return;
+    }
   }
   const config = getCertificadoConfigSync();
   const nombreCliente = $('certClienteNombre').value.trim();
@@ -3993,6 +4182,19 @@ async function generarCertificadoTratamientoPDF(){
   if(!folio){ customAlert('Ingresa el folio del certificado.'); return; }
   if(!fechaStr){ customAlert('Ingresa la fecha del certificado.'); return; }
   if(embalajeItems.length === 0){ customAlert('Agrega al menos un renglón en el detalle del embalaje tratado.'); return; }
+
+  // Cargas del horno: si se agregaron varias, el certificado lleva una página por
+  // carga; si no, se usa la gráfica actual como única carga (como antes).
+  const totalPedido = totalTarimasEmbalaje();
+  const cargas = cargasHorno.map(c => Object.assign({}, c, { tarimas: parseInt(c.tarimas), fecha: c.fecha || fechaStr }));
+  const multiCarga = cargas.length > 1;
+  {
+    const sumaCargas = cargas.reduce((s, c) => s + c.tarimas, 0);
+    if(sumaCargas !== totalPedido){
+      const seguir = await customConfirm('Las cargas suman ' + sumaCargas + ' tarimas, pero el detalle del embalaje suma ' + totalPedido + '. ¿Generar el certificado de todos modos?');
+      if(!seguir) return;
+    }
+  }
 
   $('graficoMsg').textContent = 'Preparando generador de PDF…';
   try{
@@ -4122,18 +4324,56 @@ async function generarCertificadoTratamientoPDF(){
   });
   y += 10;
 
+  if(multiCarga){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...colWood);
+    doc.text('TOTAL DEL PEDIDO: ' + totalPedido + ' TARIMAS — TRATADAS EN ' + cargas.length + ' CARGAS DEL HORNO', margin, y);
+    y += 6;
+    const cw = [22, 30, 26, contentW - 78];
+    doc.setFillColor(...colBrown);
+    doc.rect(margin, y, contentW, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+    let hx = margin;
+    ['CARGA','FECHA','TARIMAS','TIEMPO EN RANGO (56°C O MÁS)'].forEach((t,i) => { doc.text(t, hx+3, y+5); hx += cw[i]; });
+    y += 7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...colBrown);
+    cargas.forEach((c, i) => {
+      const r = resumenCarga(c.rows);
+      doc.setDrawColor(220,212,198); doc.setLineWidth(0.2);
+      doc.rect(margin, y, contentW, 7);
+      let rx = margin;
+      const vals = [String(i+1), formatDateDMY(parseISODateLocal(c.fecha)), String(c.tarimas),
+        r.minutos + ' min' + (r.desde ? ' (' + r.desde + ' a ' + r.hasta + ')' : '')];
+      vals.forEach((v,k) => { doc.text(v, rx+3, y+5); rx += cw[k]; });
+      y += 7;
+    });
+    y += 10;
+  }
+
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...colGray);
-  const parrafo = 'El embalaje de madera descrito fue sometido a tratamiento térmico conforme a la NOM-144-SEMARNAT-2017, alcanzando una temperatura mínima de 56°C durante al menos 30 minutos continuos en el núcleo de la madera, según el registro de temperatura que se muestra en las siguientes páginas de este documento.';
+  const parrafo = multiCarga
+    ? 'El embalaje de madera descrito fue sometido a tratamiento térmico conforme a la NOM-144-SEMARNAT-2017 en ' + cargas.length + ' cargas del horno, alcanzando en cada una una temperatura mínima de 56°C durante al menos 30 minutos continuos en el núcleo de la madera, según los registros de temperatura de cada carga que se muestran en las siguientes páginas de este documento.'
+    : 'El embalaje de madera descrito fue sometido a tratamiento térmico conforme a la NOM-144-SEMARNAT-2017, alcanzando una temperatura mínima de 56°C durante al menos 30 minutos continuos en el núcleo de la madera, según el registro de temperatura que se muestra en las siguientes páginas de este documento.';
   const parLines = doc.splitTextToSize(parrafo, contentW);
   doc.text(parLines, margin, y);
 
   drawFooter();
 
-  // ---------- PÁGINA 2: gráfica + tabla ----------
+  // ---------- PÁGINAS DE GRÁFICA + TABLA (una por carga del horno) ----------
+  for(let ci = 0; ci < cargas.length; ci++){
+  const carga = cargas[ci];
   doc.addPage();
   y = 18;
 
-  const { rows, hasT3 } = semarnatState;
+  const { rows, hasT3 } = carga;
+  if(multiCarga){
+    doc.setFillColor(...colWood);
+    doc.rect(margin, y-5, contentW, 9, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+    doc.text('CARGA ' + (ci+1) + ' DE ' + cargas.length + ' — ' + carga.tarimas + ' TARIMAS', margin+3, y+1.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('Folio ' + folio + ' · Total del pedido: ' + totalPedido + ' tarimas', pageW-margin-3, y+1.5, { align: 'right' });
+    y += 14;
+  }
   const highlighted = rows.filter(r => r.highlighted);
   const horaInicio = rows.length ? rows[0].hora : '—';
   const horaTermino = rows.length ? rows[rows.length-1].hora : '—';
@@ -4141,7 +4381,7 @@ async function generarCertificadoTratamientoPDF(){
   const tiempoRango = (highlighted.length * 5) + ' min';
 
   const stats = [
-    { label: 'FECHA', value: formatDateDMY(parseISODateLocal(fechaStr)) },
+    { label: 'FECHA', value: formatDateDMY(parseISODateLocal(carga.fecha || fechaStr)) },
     { label: 'HORA DE INICIO', value: horaInicio },
     { label: 'HORA DE TÉRMINO', value: horaTermino },
     { label: 'ALCANCE DE 56°C', value: horaAlcance }
@@ -4236,6 +4476,7 @@ async function generarCertificadoTratamientoPDF(){
   doc.text(notaLines, margin, y);
 
   drawFooter();
+  }
 
   const filename = 'CertTH_' + slugArchivoCliente(nombreCliente) + '_' + folio.replace(/[^A-Za-z0-9-]/g,'') + '.pdf';
   const blob = doc.output('blob');
